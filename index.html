@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Do You Know What Really Is in the Stuff You Buy?</title>
+<style>
+/* ===== 1. COLOURS & BASICS (change these to restyle the site) ===== */
+:root {
+  --green: #2f5d3a;
+  --green-light: #dfe9d6;
+  --beige: #f3ecdc;
+  --beige-dark: #e4d9c0;
+  --white: #fffdf8;
+  --ink: #23301f;
+  --alert: #c8321f;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--beige); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.5; }
+h1, h2, .logo { font-family: Georgia, "Times New Roman", serif; }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--alert); outline-offset: 2px; }
+
+/* ===== 2. FAKE SHOP HEADER ===== */
+.shopbar { background: var(--white); border-bottom: 1px solid var(--beige-dark); display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; }
+.logo { color: var(--green); font-size: 1.4rem; font-weight: bold; }
+.shopbar nav { display: flex; gap: 18px; font-size: .9rem; color: var(--green); }
+.shopbar nav a { color: inherit; text-decoration: none; }
+.banner { background: var(--green); color: var(--white); text-align: center; font-size: .85rem; padding: 6px 10px; }
+
+/* ===== 3. HERO ===== */
+.hero { text-align: center; padding: 36px 20px 10px; max-width: 760px; margin: auto; }
+.hero h1 { font-size: clamp(1.8rem, 6vw, 3rem); line-height: 1.1; margin: 0 0 12px; color: var(--green); }
+.hero p { margin: 0; color: #4b5a45; }
+
+/* ===== 4. THE DECK ===== */
+.deck { max-width: 460px; margin: 0 auto; padding: 20px 16px 10px; }
+.stage { display: flex; align-items: center; gap: 8px; }
+.arrow { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--green); background: var(--white); color: var(--green); font-size: 1.3rem; transition: background .2s, color .2s; }
+.arrow:hover { background: var(--green); color: var(--white); }
+.slider { flex: 1; touch-action: pan-y; user-select: none; }
+.perspective { perspective: 1200px; }
+.card { position: relative; width: 100%; aspect-ratio: 3 / 4; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.45, .05, .2, 1); cursor: pointer; }
+.card.flipped { transform: rotateY(180deg); }
+.card.noflip { transition: none; }
+.face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 10px 30px rgba(47, 93, 58, .25); }
+.face img { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
+.face.back { transform: rotateY(180deg); }
+/* A "transforming" sweep that plays while the card flips */
+.face::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(200, 50, 31, .35) 50%, transparent 65%); transform: translateX(-100%); pointer-events: none; }
+.card.flipping .face::after { animation: sweep .9s ease-in-out; }
+@keyframes sweep { to { transform: translateX(100%); } }
+.card.flipping .face.front img { filter: grayscale(.8) contrast(1.2); transition: filter .5s; }
+.tag { position: absolute; left: 10px; bottom: 10px; background: rgba(35, 48, 31, .85); color: #fff; font-size: .75rem; padding: 3px 10px; border-radius: 99px; }
+.face.back .tag { background: var(--alert); }
+
+.info { text-align: center; margin-top: 16px; }
+.info h2 { margin: 0; font-size: 1.3rem; color: var(--green); }
+.counter { margin: 4px 0 0; font-weight: 600; }
+.hint { font-size: .85rem; color: #6b7a63; margin: 2px 0 0; }
+.dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--beige-dark); }
+.dot.on { background: var(--green); }
+
+/* ===== 5. ADD A LABEL ===== */
+.panel { max-width: 640px; margin: 30px auto; padding: 24px 20px; background: var(--white); border: 1px solid var(--beige-dark); border-radius: 14px; }
+.panel h2 { margin: 0 0 4px; color: var(--green); }
+.panel > p { margin: 0 0 16px; color: #4b5a45; font-size: .95rem; }
+label { display: block; font-weight: 600; margin: 14px 0 6px; }
+input[type="text"] { width: 100%; padding: 10px 12px; border: 2px solid var(--beige-dark); border-radius: 8px; font: inherit; background: #fff; }
+.uploads { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.drop { display: block; border: 2px dashed var(--green); border-radius: 10px; background: var(--green-light); aspect-ratio: 3 / 4; position: relative; overflow: hidden; cursor: pointer; text-align: center; margin: 0; font-weight: 400; }
+.drop span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 10px; font-size: .9rem; color: var(--green); }
+.drop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.drop input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+.btn { background: var(--green); color: var(--white); border: 0; padding: 11px 20px; border-radius: 8px; font-weight: 600; margin-top: 16px; }
+.btn.alt { background: transparent; color: var(--green); border: 2px solid var(--green); margin-left: 8px; }
+.btn:hover { filter: brightness(1.1); }
+.msg { color: var(--alert); font-size: .9rem; min-height: 1.3em; margin: 10px 0 0; }
+
+/* ===== 6. MY LABELS LIST ===== */
+.list-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--beige-dark); }
+.list-item img { width: 40px; height: 54px; object-fit: cover; border-radius: 4px; background: #fff; }
+.list-item strong { flex: 1; overflow-wrap: anywhere; }
+.small { padding: 6px 12px; font-size: .85rem; border-radius: 6px; border: 2px solid var(--green); background: transparent; color: var(--green); }
+.small.del { border-color: var(--alert); color: var(--alert); }
+.empty { color: #6b7a63; font-size: .9rem; margin: 0; }
+
+/* ===== 7. FINAL MESSAGE ===== */
+footer { background: var(--green); color: var(--white); text-align: center; padding: 50px 20px; margin-top: 40px; }
+footer p { font-family: Georgia, serif; font-size: clamp(1.5rem, 5vw, 2.6rem); font-weight: bold; margin: 0; letter-spacing: .02em; }
+
+@media (prefers-reduced-motion: reduce) { .card { transition-duration: .01s; } .card.flipping .face::after { animation: none; } }
+@media (max-width: 520px) { .arrow { display: none; } .shopbar nav { display: none; } }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <h1>Do You Know What Really Is in the Stuff You Buy?</h1>
+  <p>Green leaves, earthy colours, big promises. Tap a label to see what it looks like when we question it.</p>
+</section>
+
+<!-- ===== THE SWIPEABLE DECK ===== -->
+<section class="deck" id="deck">
+  <div class="stage">
+    <button class="arrow" id="prev" aria-label="Previous label">&#8592;</button>
+    <div class="slider" id="slider">
+      <div class="perspective">
+        <div class="card" id="card" tabindex="0" role="button" aria-label="Tap to flip the label">
+          <div class="face front"><img id="imgFront" alt="Original product label"><span class="tag">Original</span></div>
+          <div class="face back"><img id="imgBack" alt="Altered protest label"><span class="tag">Questioned</span></div>
+        </div>
+      </div>
+    </div>
+    <button class="arrow" id="next" aria-label="Next label">&#8594;</button>
+  </div>
+  <div class="info">
+    <h2 id="title"></h2>
+    <p class="counter" id="counter"></p>
+    <p class="hint">Tap the label to flip it. Swipe or use the arrows to browse.</p>
+    <div class="dots" id="dots"></div>
+  </div>
+</section>
+
+<!-- ===== ADD / EDIT FORM ===== -->
+<section class="panel" id="add" hidden>
+  <h2 id="formTitle">Add a label</h2>
+  <p>Only you can see this section. New cards are saved in this browser until you publish them (see "My labels" below).</p>
+  <label for="name">Product name</label>
+  <input type="text" id="name" maxlength="60" placeholder="e.g. Green Splash Dish Soap">
+  <div class="uploads">
+    <div>
+      <label>Original label</label>
+      <label class="drop"><span id="ph1">Tap to choose image</span><img id="pv1" hidden alt=""><input type="file" id="file1" accept="image/*"></label>
+    </div>
+    <div>
+      <label>My altered version</label>
+      <label class="drop"><span id="ph2">Tap to choose image</span><img id="pv2" hidden alt=""><input type="file" id="file2" accept="image/*"></label>
+    </div>
+  </div>
+  <p class="msg" id="msg" role="alert"></p>
+  <button class="btn" id="save">Save label</button>
+  <button class="btn alt" id="cancel" hidden>Cancel edit</button>
+</section>
+
+<!-- ===== MY LABELS ===== -->
+<section class="panel" id="mine" hidden>
+  <h2>My labels</h2>
+  <p>To show your labels to everyone: click "Download labels-data.js", then upload that file to your GitHub repository, replacing the old one.</p>
+  <div id="myList"></div>
+  <button class="btn" id="exportBtn">Download labels-data.js</button>
+</section>
+
+<footer><p>DON’T JUST READ THE LABEL. QUESTION IT.</p></footer>
+
+<script src="labels-data.js"></script>
+<script>
+/* ===== 1. SAMPLE LABELS =====
+   These are drawn with code (SVG) so you don't need any image files.
+   Edit the text below to change them. */
+const sampleData = [
+  { title: "GreenSip Spring Water", brand: "GreenSip", product: "SPRING WATER", color: "#3f7d4e",
+    claims: ["100% NATURAL", "ECO-FRIENDLY BOTTLE", "PURE & SUSTAINABLE"],
+    truths: ["100% PLASTIC BOTTLE", "ECO FOR WHOM?", "TAKES CENTURIES TO BREAK DOWN"] },
+  { title: "Planet Pure Detergent", brand: "Planet Pure", product: "LAUNDRY LIQUID", color: "#4d8f9a",
+    claims: ["EARTH-SAFE", "GREEN FORMULA", "KIND TO NATURE"],
+    truths: ["SAFE? SHOW THE PROOF", "WHERE'S THE FULL LIST?", "KIND TO WHOM?"] },
+  { title: "Nature's Promise Snacks", brand: "Nature's Promise", product: "CRUNCHY SNACKS", color: "#a8742f",
+    claims: ["ALL NATURAL", "SUSTAINABLY SOURCED", "PLANET FRIENDLY"],
+    truths: ["NATURAL ≠ GOOD FOR YOU", "SOURCED WHERE? BY WHOM?", "WHO CHECKED?"] }
+];
+
+function esc(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+function makeSvg(d, altered) {
+  let s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800">';
+  s += '<rect width="600" height="800" fill="' + (altered ? "#e9e0cc" : "#f6f1e3") + '"/>';
+  s += '<rect width="600" height="190" fill="' + d.color + '"/>';
+  s += '<circle cx="90" cy="95" r="48" fill="#fffdf8" opacity=".9"/>';
+  s += '<path d="M90 130 C60 100 70 65 100 55 C110 85 112 105 90 130Z" fill="' + d.color + '"/>';
+  s += '<text x="160" y="110" font-family="Georgia,serif" font-size="46" font-weight="bold" fill="#fffdf8">' + esc(d.brand) + '</text>';
+  s += '<text x="300" y="285" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" letter-spacing="6" fill="#23301f">' + esc(d.product) + '</text>';
+  d.claims.forEach(function (c, i) {
+    const y = 330 + i * 110;
+    s += '<rect x="70" y="' + y + '" width="460" height="60" rx="30" fill="' + (altered ? "#d8cfb8" : "#dfe9d6") + '" stroke="' + d.color + '" stroke-width="3"/>';
+    s += '<text x="300" y="' + (y + 40) + '" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="28" fill="#2f5d3a">' + esc(c) + '</text>';
+    if (altered) {
+      s += '<line x1="60" y1="' + (y + 28) + '" x2="540" y2="' + (y + 34) + '" stroke="#c8321f" stroke-width="7" stroke-linecap="round"/>';
+      s += '<text x="300" y="' + (y + 88) + '" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="bold" font-size="25" fill="#c8321f" transform="rotate(' + (i % 2 ? 2 : -2) + ' 300 ' + (y + 80) + ')">' + esc(d.truths[i]) + '</text>';
+    }
+  });
+  if (altered) {
+    s += '<g transform="rotate(-12 300 740)"><rect x="150" y="712" width="300" height="56" fill="none" stroke="#c8321f" stroke-width="5"/>';
+    s += '<text x="300" y="752" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="32" fill="#c8321f">GREENWASHED?</text></g>';
+  } else {
+    s += '<text x="300" y="765" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" fill="#2f5d3a">Good for you. Good for the planet.</text>';
+  }
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(s + "</svg>");
+}
+
+const samples = sampleData.map(function (d) {
+  return { title: d.title, front: makeSvg(d, false), back: makeSvg(d, true), sample: true };
+});
+
+/* ===== 2. SAVING TO BROWSER STORAGE ===== */
+const STORAGE_KEY = "greenwash-labels-v1";
+let myLabels = [];
+const published = (typeof publishedLabels !== "undefined") ? publishedLabels : [];
+// Only you see the add/edit tools: open your site with #admin on the end of the address
+const isAdmin = location.hash === "#admin";
+window.addEventListener("hashchange", function () { location.reload(); });
+try {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  // First time in admin mode: start from the labels you already published
+  myLabels = stored === null ? published.slice() : (JSON.parse(stored) || []);
+} catch (e) { myLabels = []; }
+
+function saveToBrowser() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(myLabels)); return true; }
+  catch (e) { return false; } // usually means the browser storage is full
+}
+
+/* ===== 3. THE DECK ===== */
+const $ = function (id) { return document.getElementById(id); };
+const card = $("card"), slider = $("slider");
+let index = 0, flipped = false;
+
+// Visitors see the labels you published. If there are none yet, they see the samples.
+function allLabels() {
+  const list = isAdmin ? myLabels : published;
+  return list.length ? list : samples;
+}
+
+function showCard() {
+  const all = allLabels();
+  if (index >= all.length) index = all.length - 1;
+  const l = all[index];
+  $("imgFront").src = l.front;
+  $("imgBack").src = l.back;
+  $("title").textContent = l.title;
+  $("counter").textContent = "Label " + (index + 1) + " of " + all.length;
+  $("dots").innerHTML = all.map(function (_, i) { return '<span class="dot' + (i === index ? " on" : "") + '"></span>'; }).join("");
+}
+
+function flip() {
+  flipped = !flipped;
+  card.classList.add("flipping");
+  card.classList.toggle("flipped", flipped);
+  setTimeout(function () { card.classList.remove("flipping"); }, 950);
+}
+
+let busy = false;
+function go(dir) { // dir = +1 (next) or -1 (previous)
+  const count = allLabels().length;
+  if (busy || count < 2) return;
+  busy = true;
+  slider.style.transition = "transform .25s ease, opacity .25s ease";
+  slider.style.transform = "translateX(" + (-dir * 60) + "%)";
+  slider.style.opacity = "0";
+  setTimeout(function () {
+    index = (index + dir + count) % count;
+    flipped = false;
+    card.classList.add("noflip");
+    card.classList.remove("flipped");
+    showCard();
+    slider.style.transition = "none";
+    slider.style.transform = "translateX(" + (dir * 60) + "%)";
+    void slider.offsetWidth; // forces the browser to apply the change
+    card.classList.remove("noflip");
+    slider.style.transition = "transform .3s ease, opacity .3s ease";
+    slider.style.transform = "translateX(0)";
+    slider.style.opacity = "1";
+    setTimeout(function () { busy = false; }, 300);
+  }, 250);
+}
+
+// Touch + mouse: a short tap flips, a drag left/right changes label
+let startX = null;
+slider.addEventListener("pointerdown", function (e) { startX = e.clientX; });
+slider.addEventListener("pointerup", function (e) {
+  if (startX === null) return;
+  const dx = e.clientX - startX;
+  startX = null;
+  if (dx < -50) go(1);
+  else if (dx > 50) go(-1);
+  else if (Math.abs(dx) < 10) flip();
+});
+slider.addEventListener("pointercancel", function () { startX = null; });
+
+$("prev").onclick = function () { go(-1); };
+$("next").onclick = function () { go(1); };
+document.addEventListener("keydown", function (e) {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowLeft") go(-1);
+  if (e.key === "ArrowRight") go(1);
+  if ((e.key === "Enter" || e.key === " ") && e.target === card) { e.preventDefault(); flip(); }
+});
+
+/* ===== 4. ADD / EDIT FORM ===== */
+let pending = { 1: null, 2: null }; // images chosen but not yet saved
+let editingId = null;
+
+// Shrinks big photos so they fit in browser storage
+function readImage(file) {
+  return new Promise(function (resolve, reject) {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = function () {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = function () {
+        const max = 700, scale = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL("image/jpeg", 0.8));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function setPreview(n, src) {
+  $("pv" + n).src = src || "";
+  $("pv" + n).hidden = !src;
+  $("ph" + n).hidden = !!src;
+}
+
+[1, 2].forEach(function (n) {
+  $("file" + n).addEventListener("change", function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    readImage(file).then(function (data) {
+      pending[n] = data;
+      setPreview(n, data);
+      $("msg").textContent = "";
+    }).catch(function () { $("msg").textContent = "That file could not be read. Try a JPG or PNG image."; });
+  });
+});
+
+function resetForm() {
+  editingId = null;
+  pending = { 1: null, 2: null };
+  $("name").value = "";
+  $("file1").value = ""; $("file2").value = "";
+  setPreview(1, null); setPreview(2, null);
+  $("formTitle").textContent = "Add a label";
+  $("save").textContent = "Save label";
+  $("cancel").hidden = true;
+  $("msg").textContent = "";
+}
+
+$("save").onclick = function () {
+  const name = $("name").value.trim();
+  const existing = myLabels.find(function (l) { return l.id === editingId; });
+  const front = pending[1] || (existing && existing.front);
+  const back = pending[2] || (existing && existing.back);
+  if (!name) { $("msg").textContent = "Add a product name."; return; }
+  if (!front || !back) { $("msg").textContent = "Upload both the original and the altered image."; return; }
+
+  const backup = JSON.stringify(myLabels);
+  if (existing) { existing.title = name; existing.front = front; existing.back = back; }
+  else myLabels.push({ id: Date.now(), title: name, front: front, back: back });
+
+  if (!saveToBrowser()) {
+    myLabels = JSON.parse(backup);
+    $("msg").textContent = "Browser storage is full. Delete a label or use smaller images.";
+    return;
+  }
+  index = myLabels.indexOf(existing || myLabels[myLabels.length - 1]);
+  resetForm();
+  renderAll();
+  $("deck").scrollIntoView({ behavior: "smooth" });
+};
+$("cancel").onclick = resetForm;
+
+/* ===== 5. MY LABELS LIST (edit + delete) ===== */
+function renderList() {
+  const box = $("myList");
+  if (!myLabels.length) { box.innerHTML = '<p class="empty">Nothing here yet. Add your first label above.</p>'; return; }
+  box.innerHTML = myLabels.map(function (l) {
+    return '<div class="list-item"><img src="' + l.front + '" alt=""><strong>' + esc(l.title) + '</strong>' +
+      '<button class="small" data-edit="' + l.id + '">Edit</button>' +
+      '<button class="small del" data-del="' + l.id + '">Delete</button></div>';
+  }).join("");
+}
+
+$("myList").addEventListener("click", function (e) {
+  const editId = e.target.getAttribute("data-edit"), delId = e.target.getAttribute("data-del");
+  if (editId) {
+    const l = myLabels.find(function (x) { return String(x.id) === editId; });
+    editingId = l.id;
+    pending = { 1: null, 2: null };
+    $("name").value = l.title;
+    setPreview(1, l.front); setPreview(2, l.back);
+    $("formTitle").textContent = "Edit label";
+    $("save").textContent = "Save changes";
+    $("cancel").hidden = false;
+    $("add").scrollIntoView({ behavior: "smooth" });
+  }
+  if (delId && confirm("Delete this label? This cannot be undone.")) {
+    myLabels = myLabels.filter(function (x) { return String(x.id) !== delId; });
+    saveToBrowser();
+    if (editingId && String(editingId) === delId) resetForm();
+    renderAll();
+  }
+});
+
+function renderAll() { showCard(); renderList(); }
+
+// Download your labels as a file you can upload to GitHub so everyone sees them
+$("exportBtn").onclick = function () {
+  const text = "// Labels shown to all visitors. Replace this file in your repository to update the site.\n" +
+    "const publishedLabels = " + JSON.stringify(myLabels) + ";\n";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/javascript" }));
+  a.download = "labels-data.js";
+  a.click();
+};
+
+if (isAdmin) { $("add").hidden = false; $("mine").hidden = false; }
+renderAll();
+</script>
+</body>
+</html>
