@@ -67,7 +67,7 @@ button { font: inherit; cursor: pointer; }
 .panel h2 { margin: 0 0 4px; color: var(--green); }
 .panel > p { margin: 0 0 16px; color: #4b5a45; font-size: .95rem; }
 label { display: block; font-weight: 600; margin: 14px 0 6px; }
-input[type="text"] { width: 100%; padding: 10px 12px; border: 2px solid var(--beige-dark); border-radius: 8px; font: inherit; background: #fff; }
+input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; border: 2px solid var(--beige-dark); border-radius: 8px; font: inherit; background: #fff; }
 .uploads { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .drop { display: block; border: 2px dashed var(--green); border-radius: 10px; background: var(--green-light); aspect-ratio: 3 / 4; position: relative; overflow: hidden; cursor: pointer; text-align: center; margin: 0; font-weight: 400; }
 .drop span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 10px; font-size: .9rem; color: var(--green); }
@@ -147,9 +147,17 @@ footer p { font-family: Georgia, serif; font-size: clamp(1.5rem, 5vw, 2.6rem); f
 <!-- ===== MY LABELS ===== -->
 <section class="panel" id="mine" hidden>
   <h2>My labels</h2>
-  <p>To show your labels to everyone: click "Download labels-data.js", then upload that file to your GitHub repository, replacing the old one.</p>
+  <p>Labels you add here are only visible to you until you publish them.</p>
   <div id="myList"></div>
-  <button class="btn" id="exportBtn">Download labels-data.js</button>
+
+  <h2 style="margin-top:24px">Publish to site</h2>
+  <label for="ghRepo">Your GitHub repository (username/repo)</label>
+  <input type="text" id="ghRepo" placeholder="yourname/label-protest">
+  <label for="ghToken">GitHub token (saved only in this browser)</label>
+  <input type="password" id="ghToken" placeholder="github_pat_...">
+  <p class="msg" id="pubMsg" role="status"></p>
+  <button class="btn" id="publishBtn">Publish to site</button>
+  <button class="btn alt" id="exportBtn">Download labels-data.js instead</button>
 </section>
 
 <footer><p>DON’T JUST READ THE LABEL. QUESTION IT.</p></footer>
@@ -422,6 +430,47 @@ $("exportBtn").onclick = function () {
   a.href = URL.createObjectURL(new Blob([text], { type: "text/javascript" }));
   a.download = "labels-data.js";
   a.click();
+};
+
+// Publish straight to GitHub (no server needed): this updates labels-data.js in your repository
+function toBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+try { $("ghRepo").value = localStorage.getItem("gh-repo") || ""; $("ghToken").value = localStorage.getItem("gh-token") || ""; } catch (e) {}
+
+$("publishBtn").onclick = async function () {
+  const repo = $("ghRepo").value.trim(), token = $("ghToken").value.trim(), out = $("pubMsg");
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { out.textContent = "Enter your repository as username/repo."; return; }
+  if (!token) { out.textContent = "Paste your GitHub token first."; return; }
+  try { localStorage.setItem("gh-repo", repo); localStorage.setItem("gh-token", token); } catch (e) {}
+  out.style.color = "var(--ink)";
+  out.textContent = "Publishing...";
+  const url = "https://api.github.com/repos/" + repo + "/contents/labels-data.js";
+  const headers = { "Authorization": "Bearer " + token, "Accept": "application/vnd.github+json" };
+  try {
+    // 1. find the current file (GitHub needs its ID to replace it)
+    let sha;
+    const get = await fetch(url, { headers: headers });
+    if (get.ok) sha = (await get.json()).sha;
+    else if (get.status !== 404) throw new Error("Could not reach the repository (error " + get.status + "). Check the repo name and token.");
+    // 2. upload the new file
+    const text = "// Labels shown to all visitors. Replace this file in your repository to update the site.\n" +
+      "const publishedLabels = " + JSON.stringify(myLabels) + ";\n";
+    const put = await fetch(url, {
+      method: "PUT", headers: headers,
+      body: JSON.stringify({ message: "Update labels", content: toBase64(text), sha: sha })
+    });
+    if (!put.ok) throw new Error("GitHub refused the update (error " + put.status + "). Make sure the token has Contents: Read and write.");
+    out.style.color = "#2f5d3a";
+    out.textContent = "Published! It can take about a minute to appear on your normal link.";
+  } catch (err) {
+    out.style.color = "var(--alert)";
+    out.textContent = err.message;
+  }
 };
 
 if (isAdmin) { $("add").hidden = false; $("mine").hidden = false; }
