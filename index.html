@@ -86,6 +86,9 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
 .small.del { border-color: var(--alert); color: var(--alert); }
 .empty { color: #6b7a63; font-size: .9rem; margin: 0; }
 
+#toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); max-width: 90%; color: #fff; padding: 10px 18px; border-radius: 10px; font-size: .9rem; z-index: 10; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+#toast[hidden] { display: none; }
+
 /* ===== 7. FINAL MESSAGE ===== */
 footer { background: var(--green); color: var(--white); text-align: center; padding: 50px 20px; margin-top: 40px; }
 footer p { font-family: Georgia, serif; font-size: clamp(1.5rem, 5vw, 2.6rem); font-weight: bold; margin: 0; letter-spacing: .02em; }
@@ -126,7 +129,7 @@ footer p { font-family: Georgia, serif; font-size: clamp(1.5rem, 5vw, 2.6rem); f
 <!-- ===== ADD / EDIT FORM ===== -->
 <section class="panel" id="add" hidden>
   <h2 id="formTitle">Add a label</h2>
-  <p>Only you can see this section. New cards are saved in this browser until you publish them (see "My labels" below).</p>
+  <p>Only you can see this section. Once your GitHub details are set up under "Publish to site" (below), every label you save appears on the live site automatically.</p>
   <label for="name">Product name</label>
   <input type="text" id="name" maxlength="60" placeholder="e.g. Green Splash Dish Soap">
   <div class="uploads">
@@ -147,7 +150,7 @@ footer p { font-family: Georgia, serif; font-size: clamp(1.5rem, 5vw, 2.6rem); f
 <!-- ===== MY LABELS ===== -->
 <section class="panel" id="mine" hidden>
   <h2>My labels</h2>
-  <p>Labels you add here are only visible to you until you publish them.</p>
+  <p>Saving, editing or deleting a label updates the live site automatically (after the one-time setup below).</p>
   <div id="myList"></div>
 
   <h2 style="margin-top:24px">Publish to site</h2>
@@ -161,6 +164,7 @@ footer p { font-family: Georgia, serif; font-size: clamp(1.5rem, 5vw, 2.6rem); f
 </section>
 
 <footer><p>DON’T JUST READ THE LABEL. QUESTION IT.</p></footer>
+<div id="toast" hidden role="status"></div>
 
 <script src="labels-data.js"></script>
 <script>
@@ -384,6 +388,7 @@ $("save").onclick = function () {
   index = myLabels.indexOf(existing || myLabels[myLabels.length - 1]);
   resetForm();
   renderAll();
+  autoPublish();
   $("deck").scrollIntoView({ behavior: "smooth" });
 };
 $("cancel").onclick = resetForm;
@@ -417,6 +422,7 @@ $("myList").addEventListener("click", function (e) {
     saveToBrowser();
     if (editingId && String(editingId) === delId) resetForm();
     renderAll();
+    autoPublish();
   }
 });
 
@@ -442,13 +448,33 @@ function toBase64(str) {
 
 try { $("ghRepo").value = localStorage.getItem("gh-repo") || ""; $("ghToken").value = localStorage.getItem("gh-token") || ""; } catch (e) {}
 
-$("publishBtn").onclick = async function () {
-  const repo = $("ghRepo").value.trim(), token = $("ghToken").value.trim(), out = $("pubMsg");
-  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { out.textContent = "Enter your repository as username/repo."; return; }
-  if (!token) { out.textContent = "Paste your GitHub token first."; return; }
+const INK = "#23301f", GREEN = "#2f5d3a", RED = "#c8321f";
+let publishing = false, publishAgain = false;
+
+// Shows a message in the Publish section and as a small pop-up at the bottom
+function say(text, color) {
+  $("pubMsg").textContent = text;
+  $("pubMsg").style.color = color;
+  const t = $("toast");
+  t.textContent = text; t.style.background = color; t.hidden = false;
+  clearTimeout(say.timer);
+  say.timer = setTimeout(function () { t.hidden = true; }, 6000);
+}
+
+// Called after every save, edit or delete
+function autoPublish() {
+  if ($("ghRepo").value.trim() && $("ghToken").value.trim()) publishNow();
+  else say("Saved on this device only. Add your GitHub repo and token under \"Publish to site\" to show it to everyone.", RED);
+}
+
+async function publishNow() {
+  const repo = $("ghRepo").value.trim(), token = $("ghToken").value.trim();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { say("Enter your repository as username/repo.", RED); return; }
+  if (!token) { say("Paste your GitHub token first.", RED); return; }
+  if (publishing) { publishAgain = true; return; } // wait for the current publish to finish
+  publishing = true;
   try { localStorage.setItem("gh-repo", repo); localStorage.setItem("gh-token", token); } catch (e) {}
-  out.style.color = "var(--ink)";
-  out.textContent = "Publishing...";
+  say("Publishing...", INK);
   const url = "https://api.github.com/repos/" + repo + "/contents/labels-data.js";
   const headers = { "Authorization": "Bearer " + token, "Accept": "application/vnd.github+json" };
   try {
@@ -465,13 +491,14 @@ $("publishBtn").onclick = async function () {
       body: JSON.stringify({ message: "Update labels", content: toBase64(text), sha: sha })
     });
     if (!put.ok) throw new Error("GitHub refused the update (error " + put.status + "). Make sure the token has Contents: Read and write.");
-    out.style.color = "#2f5d3a";
-    out.textContent = "Published! It can take about a minute to appear on your normal link.";
+    say("Published! It can take about a minute to appear on your normal link.", GREEN);
   } catch (err) {
-    out.style.color = "var(--alert)";
-    out.textContent = err.message;
+    say(err.message, RED);
   }
-};
+  publishing = false;
+  if (publishAgain) { publishAgain = false; publishNow(); }
+}
+$("publishBtn").onclick = publishNow;
 
 if (isAdmin) { $("add").hidden = false; $("mine").hidden = false; }
 renderAll();
